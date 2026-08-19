@@ -119,30 +119,16 @@
     display:flex; flex-direction:column; align-items:center; gap:20px;
   }
   .nfc-card{
-    width:280px; aspect-ratio:1.586/1; border-radius:16px;
+    width:260px; border-radius:16px; overflow:hidden;
     background:linear-gradient(155deg,#242f3d 0%, #171e28 60%, #10151d 100%);
     border:1px solid rgba(255,255,255,0.12);
     box-shadow:0 20px 40px -18px rgba(0,0,0,0.6);
-    padding:20px 22px; position:relative; cursor:pointer;
+    position:relative; cursor:pointer;
     user-select:none; -webkit-tap-highlight-color:transparent;
     transition:transform .12s ease;
   }
   .nfc-card:active{transform:scale(0.97);}
-  .nfc-card .chip{
-    width:38px; height:28px; border-radius:5px;
-    background:linear-gradient(160deg,#3a4552,#242c36);
-    border:1px solid rgba(79,209,197,0.4);
-  }
-  .nfc-card .brand{
-    position:absolute; bottom:18px; left:22px;
-    font-family:'Big Shoulders Display',sans-serif; font-weight:700;
-    font-size:22px; text-transform:uppercase; letter-spacing:0.03em; color:var(--white);
-  }
-  .nfc-card .wave{
-    position:absolute; top:20px; right:20px; width:22px; height:22px;
-    border-top:2px solid var(--green); border-right:2px solid var(--green);
-    border-radius:0 8px 0 0; opacity:0.8;
-  }
+  .nfc-card img{width:100%; height:auto; display:block;}
   .ripple{
     position:absolute; inset:0; border-radius:16px; pointer-events:none;
   }
@@ -253,6 +239,12 @@
     background:transparent; color:var(--white); font-family:'IBM Plex Sans',sans-serif; font-size:14px;
   }
   .waitlist-row input::placeholder{color:var(--grey-on-dark);}
+  .waitlist-notes{
+    width:100%; margin-top:12px; padding:14px 16px; border-radius:10px;
+    border:1.5px solid rgba(255,255,255,0.3); background:transparent; color:var(--white);
+    font-family:'IBM Plex Sans',sans-serif; font-size:14px; resize:vertical; min-height:90px;
+  }
+  .waitlist-notes::placeholder{color:var(--grey-on-dark);}
   .waitlist-msg{margin-top:12px; font-size:13.5px; color:var(--green); font-family:'IBM Plex Mono',monospace; min-height:18px;}
 
   /* ---------- FOOTER ---------- */
@@ -283,10 +275,8 @@
       <button type="button" class="btn" id="heroCta">Generar mi enlace de reseña</button>
     </div>
     <div class="card-stage">
-      <div class="nfc-card" id="nfcCard" role="button" tabindex="0" aria-label="Tocar tarjeta de demostración">
-        <div class="chip"></div>
-        <div class="wave"></div>
-        <div class="brand">Tokan</div>
+      <div class="nfc-card" id="nfcCard" role="button" tabindex="0" aria-label="Tocar tarjeta de demostración: Google Review Card de Tokan">
+        <img id="heroProductImg" src="" alt="Google Review Card de Tokan para mostrador, con logo de Google, estrellas, NFC y código QR">
         <div class="ripple"><span></span></div>
       </div>
       <span class="tap-hint">TOCA LA TARJETA →</span>
@@ -365,8 +355,9 @@
       <div class="waitlist-row">
         <input type="text" id="waitlistBusiness" placeholder="Nombre de tu negocio">
         <input type="text" id="waitlistContact" placeholder="Tu WhatsApp o correo">
-        <button class="btn" id="waitlistBtn">Pedir información</button>
       </div>
+      <textarea id="waitlistNotes" class="waitlist-notes" rows="3" placeholder="Notas: tipo de negocio, cuántas tarjetas necesitas, personalización, dudas..."></textarea>
+      <button class="btn" id="waitlistBtn" style="margin-top:16px;">Pedir información</button>
       <div class="waitlist-msg" id="waitlistMsg"></div>
     </div>
   </div>
@@ -396,6 +387,11 @@
     setTimeout(()=> toolInputRef && toolInputRef.focus(), 500);
   });
   const toolInputRef = document.getElementById('toolInput');
+
+  // ---- Hero product photo (reusa la misma foto de la sección de tarjetas, sin duplicar el archivo) ----
+  const heroProductImg = document.getElementById('heroProductImg');
+  const cardsProductImgEl = document.getElementById('productShotImg');
+  if(heroProductImg && cardsProductImgEl){ heroProductImg.src = cardsProductImgEl.src; }
 
   // ---- Hero tap demo ----
   const nfcCard = document.getElementById('nfcCard');
@@ -486,15 +482,18 @@
   const GOOGLE_FORM_ID = '1FAIpQLSeO4f1eCuOk1K0rz3MgYd0nFQ2jSKQuzeeuGNa6hAErLRDgPg';
   const GOOGLE_FORM_ENTRY_CONTACT = 'entry.119875224';
   const GOOGLE_FORM_ENTRY_BUSINESS = 'entry.1127872593';
+  const GOOGLE_FORM_ENTRY_NOTES = 'entry.578428522';
 
   const waitlistBtn = document.getElementById('waitlistBtn');
   const waitlistBusiness = document.getElementById('waitlistBusiness');
   const waitlistContact = document.getElementById('waitlistContact');
+  const waitlistNotes = document.getElementById('waitlistNotes');
   const waitlistMsg = document.getElementById('waitlistMsg');
 
   waitlistBtn.addEventListener('click', ()=>{
     const contact = waitlistContact.value.trim();
     const business = waitlistBusiness.value.trim();
+    const notes = waitlistNotes.value.trim();
 
     if(!contact){
       waitlistMsg.textContent = 'Escribe tu WhatsApp o correo primero.';
@@ -505,6 +504,7 @@
     params.set('usp', 'pp_url');
     params.set(GOOGLE_FORM_ENTRY_CONTACT, contact);
     params.set(GOOGLE_FORM_ENTRY_BUSINESS, business);
+    params.set(GOOGLE_FORM_ENTRY_NOTES, notes);
 
     const url = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/viewform?${params.toString()}`;
     window.open(url, '_blank', 'noopener');
@@ -512,6 +512,7 @@
     waitlistMsg.textContent = 'Se abrió tu formulario ya lleno en una pestaña nueva — solo dale a "Enviar" ahí.';
     waitlistContact.value = '';
     waitlistBusiness.value = '';
+    waitlistNotes.value = '';
   });
 </script>
 
